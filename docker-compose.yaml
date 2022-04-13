@@ -44,8 +44,8 @@ x-airflow-common:
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.2.5}
-  # build: .
+  # REPLACED # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.2.5}
+  build: .
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
@@ -265,6 +265,32 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+        
+  zookeeper:
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - "2181:2181"
+    volumes:
+      - ./bitnami:/bitnami
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      
+  kafka:
+    image: 'bitnami/kafka:latest'
+    ports:
+      - '9093:9093'
+    volumes:
+      - ./bitnami:/bitnami
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://0.0.0.0:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka:9092,EXTERNAL://localhost:9093
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=CLIENT
+    depends_on:
+      - zookeeper  
+      
 
 volumes:
   postgres-db-volume:
